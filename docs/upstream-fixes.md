@@ -1,92 +1,52 @@
-# Upstream fixes adopted by this fork
+# Upstream PR readiness review
 
-These changes build on the immediate-selection fix already in this fork.
-The upstream PR branches were reviewed together because two proposals overlap.
-The original authors and source commit IDs are retained by `git cherry-pick -x`.
+The experimental #105/#107 integration has been removed from main. Runtime
+code is restored to the previously approved immediate-selection update at
+`99df5fd885e1ffa51571ff642e27dc573c26c978`.
 
-## Adoption decisions
+The experiment, authorship, layout tests and native probes remain available on
+the fork's `codex/integrate-upstream-fixes` branch for review. That branch is
+not an approved release.
 
-| Upstream proposal | Decision | Reason |
+## Current disposition
+
+| Proposal | Disposition | Evidence and missing checks |
 | --- | --- | --- |
-| [#105: Switch sections with Command-Left/Right while search is focused](https://github.com/momenbasel/pesty/pull/105) | Adopted from `ba146112d510fbea6c76a600fbc9cb62aede36d5` | Handles the existing section shortcut before search-field passthrough. Shift-modified arrows retain native query selection; ordinary arrows retain caret editing. |
-| [#106: Keep the bar open over Chrome password fields](https://github.com/momenbasel/pesty/pull/106) | Mechanism included through #107 | Both proposals add `.nonactivatingPanel`. Applying it again would duplicate the same style-mask change. #106's separate explicit-activation behavior is superseded by #107. |
-| [#107: Full-screen visibility and side-Dock spacing](https://github.com/momenbasel/pesty/pull/107) | Adopted from `2cd4ebb818b69196b587ec223f033959dc890cbd` | Uses a nonactivating panel that can join other applications, removes explicit app activation on show, and spans the display horizontally while preserving visible vertical bounds. |
+| [#105: Command-arrow section navigation](https://github.com/momenbasel/pesty/pull/105) | Candidate for approval; not on main | Small routing change. Native fixture tests passed section switching with search focused, query retention, Command-Shift text selection and ordinary caret movement. Those tests ran with the combined panel experiment; isolate this fix and review its shortcut policy before adopting it separately. |
+| [#106: Chrome password-field visibility](https://github.com/momenbasel/pesty/pull/106) | Hold | Author reports successful live Chrome tests and an unexplained early-hide run. Live Secure Event Input, the physical hotkey and paste into the originating app were not independently reproduced here. |
+| [#107: Full-screen and side-Dock changes](https://github.com/momenbasel/pesty/pull/107) | Hold | Alters panel activation, Space membership and display width. Its author lists final side-Dock visual confirmation as pending. Our geometry tests establish rectangle calculations, not actual Dock overlap or full-screen Space behavior. |
 
-The #107 width calculation is extracted into `BarResizeGeometry.layoutFrame`
-without changing its calculation. The controller uses the resulting bounds
-for presentation and subsequent resizing. Five unit tests cover left/right
-Docks, bottom-Dock/menu-bar exclusions, negative display origins, and resize
-cancellation retaining the full display width.
+All three PRs are open and non-draft. No submitted reviews or approvals were
+returned by the review API, and no check runs or commit statuses were returned
+by the checks API at review time. These are evidence gaps, not proof of a defect.
 
-`canJoinAllApplications` is available from macOS 13 in the installed AppKit
-SDK, which is earlier than this app's macOS 14 minimum. The collection behavior
-is intended for floating windows and overlays. The current combination does
-not include the mutually exclusive `primary` or `auxiliary` behaviors.
+## Why passing local tests did not establish readiness
 
-## Reproduction
+The combined experiment passed 15 unit tests, the existing gesture/strip
+probes, and three bundled fresh-launch panel runs. However, an earlier
+unbundled panel run lost focus and closed before the keyboard checks. Other
+runs passed. Changing the fixture packaging and getting passing runs did not
+explain that failure or establish that the full production flow is reliable.
 
-From a logged-in macOS GUI session:
+The fixture does not start the app delegate, clipboard polling or global
+hotkey, does not invoke paste, and does not recreate a foreign full-screen
+Space or a live Chrome password field. These limitations affect the central
+claims of #106/#107. Builds and synthetic tests were insufficient grounds for
+promoting those changes to main.
 
-```sh
-swift test
-bash scripts/check_panel_behavior.sh
-bash scripts/check_bar_navigation.sh
-bash scripts/check_card_interactions.sh
-```
+## Work required before promotion
 
-Run the GUI probes sequentially: they each need keyboard focus.
+- Evaluate #105 independently on the approved panel behavior, including its
+  intentional override of Command-Left/Right in the search field.
+- Reproduce the Chrome password-field failure on the approved build, then
+  verify visibility, Escape, hotkey toggling and paste targeting on the fix.
+- Reproduce native full-screen Space behavior with another application and
+  verify that showing, hiding and pasting preserve the intended Space/focus.
+- Visually check real left/right/bottom Docks and resizing, including whether
+  the expanded strip overlaps the Dock or obscures edge cards.
+- Investigate intermittent first-show hiding instead of treating subsequent
+  passing launches as an explanation.
 
-The panel probe compiles the production controller, panel, search field and
-local key monitor into a disposable accessory-app bundle. It runs three fresh
-launches with independent fixture history/preferences. There are no retries:
-every launch must pass. It does not start the production app delegate,
-clipboard polling or the global hotkey, and it never invokes paste.
-
-The panel checks verify that:
-
-- The panel stays visible and becomes key while the previous application
-  remains frontmost.
-- Command-Right/Left switch between history and a fixture pinboard while the
-  actual native search field owns first responder.
-- The search query survives section switching.
-- Command-Shift-Left selects query text without switching sections.
-- Ordinary Left moves the query caret without switching sections.
-- Card clicks still select correctly and use the immediate-selection scroll
-  policy inside the nonactivating panel.
-- The panel hides cleanly after editing.
-
-`NSApp.isActive` alone is not used as the frontmost-app test: in an unbundled
-fixture it could report active while `NSWorkspace` still identified the
-previous app as frontmost. The probe checks the actual frontmost process ID.
-
-## Recorded validation and limits
-
-Environment: Apple Silicon, macOS 15.7.5 (24G624), Swift 6.2.4.
-
-- All 15 unit tests passed, including the five new display-layout regressions.
-- The bundled panel probe passed all 15 checks on each of three fresh launches.
-- All 10 strip integration checks passed, including actual scroll offsets,
-  offscreen navigation, right-edge alignment, and context-menu dismissal.
-- All 13 existing gesture scenarios passed. Updated selection callbacks took
-  2.0–5.2 ms; the original-handler comparison took 356.1 ms in this run.
-- The universal release app built successfully for arm64 and x86_64, and its
-  local bundle signature verified. The local build is version 1.3.2 (11).
-
-An earlier unbundled fixture launch lost focus and hid before keyboard checks;
-other unbundled runs passed. That result was not reproduced in the three
-bundled runs, but those runs do not rule out intermittent first-show issues.
-#106's author also reports one early-hide run among otherwise passing checks.
-
-The native checks run on the ordinary desktop. They do not reproduce another
-application's native full-screen Space or a live Chrome password field holding
-Secure Event Input. Those scenarios are supported by the PR authors' reported
-manual testing, rather than independently reproduced here.
-
-Side-Dock geometry is covered with synthetic screen rectangles; actual Dock
-compositing/overlap, physical multi-monitor arrangements, macOS 14/26 runtime
-behavior, and Intel runtime behavior still require manual validation. A
-universal build establishes Intel compilation, not runtime interaction behavior.
-
-No upstream PR is merged or changed by this adoption. The clipboard-selection
-PR #108 keeps its focused branch; these additions are integrated into this
-fork's main separately.
+The 1.3.2 experimental bundle is retained under `.build/review-artifacts/` as
+unapproved. It was not installed. The installed app remains the previously
+tested 1.3.1 click-delay fix.

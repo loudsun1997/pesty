@@ -366,7 +366,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     /// The app that will receive a paste after the floating Pesty panel closes.
-    /// `previousApp` is captured before the panel appears, while
+    /// `previousApp` is captured before the panel activates, while
     /// `lastActiveApp` covers menu-bar and reopen paths where it is unavailable.
     private var pasteTarget: NSRunningApplication? {
         [lastActiveApp, previousApp, NSWorkspace.shared.frontmostApplication]
@@ -613,17 +613,6 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
                     && Settings.shared.plainTextModifier != Settings.shared.quickPasteModifier
                 pasteItem(items[digit - 1], format: plain ? .plainText : .original)
             }
-            return nil
-        }
-
-        // Command-Left/Right switch sections even while the search field is
-        // first responder. The panel can hand the field focus as soon as it
-        // becomes key, and its editor would otherwise swallow these as caret
-        // jumps in an empty query. Shift is left alone so Command-Shift-arrow
-        // still selects text in the query.
-        if cmd, !ctrl, !opt, !flags.contains(.shift),
-           code == kVK_LeftArrow || code == kVK_RightArrow {
-            moveBarSection(by: code == kVK_LeftArrow ? -1 : 1)
             return nil
         }
 

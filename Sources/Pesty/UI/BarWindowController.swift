@@ -57,7 +57,7 @@ final class BarWindowController: NSWindowController, NSWindowDelegate {
     init() {
         let panel = BarPanel(
             contentRect: NSRect(x: 0, y: 0, width: 800, height: 360),
-            styleMask: [.borderless, .nonactivatingPanel],
+            styleMask: [.borderless],
             backing: .buffered,
             defer: false)
         panel.isFloatingPanel = true
@@ -66,8 +66,7 @@ final class BarWindowController: NSWindowController, NSWindowDelegate {
         panel.isOpaque = false
         panel.hasShadow = true
         panel.hidesOnDeactivate = false
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary,
-                                    .canJoinAllApplications, .stationary]
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         panel.isMovable = false
         // Without this a stray close() would deallocate the panel and leave `window`
         // nil, which is another way to never show the bar again.
@@ -148,10 +147,7 @@ final class BarWindowController: NSWindowController, NSWindowDelegate {
         guard let panel = window else { return }
         guard let screen = Self.targetScreen() else { return }
         panel.level = Settings.shared.hideOnClickOutside ? .modalPanel : .floating
-        // A side Dock reduces visibleFrame's width even in full-screen Spaces.
-        // The strip spans the display; only its vertical bounds avoid system UI.
-        let vf = BarResizeGeometry.layoutFrame(screenFrame: screen.frame,
-                                              visibleFrame: screen.visibleFrame)
+        let vf = screen.visibleFrame
         let onScreen = BarResizeGeometry.panelFrame(
             for: Settings.shared.barHeight,
             in: vf
@@ -177,9 +173,7 @@ final class BarWindowController: NSWindowController, NSWindowDelegate {
         let token = beginTransition()
         phase = .showing(token)
 
-        // Take keyboard focus without activating Pesty. Activating the application
-        // can switch away from another app's full-screen Space before the panel
-        // is ordered in, leaving the bar on the desktop instead of over that app.
+        NSApp.activate(ignoringOtherApps: true)
         panel.makeKeyAndOrderFront(nil)
 
         let finish: @MainActor @Sendable () -> Void = { [weak self] in
