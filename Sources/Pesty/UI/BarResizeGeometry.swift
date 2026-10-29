@@ -7,6 +7,13 @@ enum BarResizeGeometry {
     static let minimumHeight = 300.0
     static let maximumHeight = 720.0
 
+    /// A side Dock must not narrow the strip. Preserve system UI exclusions
+    /// vertically while spanning the target display's full horizontal bounds.
+    static func layoutFrame(screenFrame: CGRect, visibleFrame: CGRect) -> CGRect {
+        CGRect(x: screenFrame.minX, y: visibleFrame.minY,
+               width: screenFrame.width, height: visibleFrame.height)
+    }
+
     /// Returns a value which is safe to persist independently of the display
     /// the bar happens to be shown on.
     static func normalizedPersistedHeight(_ height: Double) -> Double {

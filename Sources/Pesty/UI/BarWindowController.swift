@@ -150,9 +150,8 @@ final class BarWindowController: NSWindowController, NSWindowDelegate {
         panel.level = Settings.shared.hideOnClickOutside ? .modalPanel : .floating
         // A side Dock reduces visibleFrame's width even in full-screen Spaces.
         // The strip spans the display; only its vertical bounds avoid system UI.
-        let visible = screen.visibleFrame
-        let vf = NSRect(x: screen.frame.minX, y: visible.minY,
-                        width: screen.frame.width, height: visible.height)
+        let vf = BarResizeGeometry.layoutFrame(screenFrame: screen.frame,
+                                              visibleFrame: screen.visibleFrame)
         let onScreen = BarResizeGeometry.panelFrame(
             for: Settings.shared.barHeight,
             in: vf

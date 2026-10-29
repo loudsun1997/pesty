@@ -366,7 +366,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     /// The app that will receive a paste after the floating Pesty panel closes.
-    /// `previousApp` is captured before the panel activates, while
+    /// `previousApp` is captured before the panel appears, while
     /// `lastActiveApp` covers menu-bar and reopen paths where it is unavailable.
     private var pasteTarget: NSRunningApplication? {
         [lastActiveApp, previousApp, NSWorkspace.shared.frontmostApplication]
